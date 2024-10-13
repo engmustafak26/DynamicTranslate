@@ -55,6 +55,11 @@ namespace DynamicTranslate.Attribute
 
             return Entity == entity && Property == property ;
         }
+
+        public void ChangeKey(string newKey)
+        {
+            Key = newKey;
+        }
     }
 
     internal enum TranslateDatabaseRecordStatus
