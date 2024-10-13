@@ -23,7 +23,7 @@ namespace DynamicTranslate.Translation
                 var translator = new GoogleTranslator();
 
                 var result = await translator.TranslateAsync(string.Join(delimiter, input), toLanguageCode, fromLanguageCode);
-                return result.Translation.Split(delimiter);
+                return result.Translation.Split(delimiter.ToCharArray());
             }
             catch (Exception ex)
             {

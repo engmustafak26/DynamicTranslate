@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 
+
 namespace DynamicTranslate
 {
     public static class ServiceCollectionExtensions
@@ -29,11 +30,11 @@ namespace DynamicTranslate
             services.AddHttpClient(nameof(DefaultTranslateEngine));
             ObjectExtensions.ServiceProvider = services.BuildServiceProvider();
 
-            var dbContext = ObjectExtensions.ServiceProvider.GetService<TranslationDbContext>();
-            if(dbContext != null)
-            {
-                dbContext.Database.Migrate();
-            }
+            //var dbContext = ObjectExtensions.ServiceProvider.GetService<TranslationDbContext>();
+            //if(dbContext != null)
+            //{
+            //    dbContext.Database.Migrate();
+            //}
 
 
             return services;
