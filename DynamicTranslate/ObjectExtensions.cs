@@ -40,6 +40,9 @@ namespace DynamicTranslate
 
                     foreach (var translationRecord in translationRecords)
                     {
+                        translationRecord.OverrideTranslationDetails = translationRecord.OverrideTranslationDetails
+                                                                                    .Where(x => x.LanguageCode == targetLanguageCode)
+                                                                                    .ToArray();
                         var matchedRecord = overrideMatched.FirstOrDefault(x => x.Attribute.IsMatched(translationRecord.Entity, translationRecord.Property)
                                                                              && (x.Attribute.IsKeyTranslation ? x.Attribute.Key : x.KeyValue) == translationRecord.Key);
                         if (matchedRecord == null)
