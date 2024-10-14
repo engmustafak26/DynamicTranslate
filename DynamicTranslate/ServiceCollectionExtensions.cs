@@ -3,6 +3,7 @@ using DynamicTranslate.Translation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Diagnostics;
 
 
 namespace DynamicTranslate
@@ -10,12 +11,14 @@ namespace DynamicTranslate
     public static class ServiceCollectionExtensions
     {
         public static IServiceCollection AddDynamicTranslate(this IServiceCollection services,
-            Action<DbContextOptionsBuilder> optionsAction = null,
+            Type dbContextType = null,
             ITranslateEngine CustomTranslateEngine = null)
         {
-            if (optionsAction != null)
+            if (dbContextType != null)
             {
-                services.AddDbContext<DB.TranslationDbContext>(optionsAction);
+                services.AddScoped<DbContext>(s => s.GetRequiredService(dbContextType) as DbContext);
+                services.AddScoped(typeof(Repository<>), typeof(Repository<>));
+
             }
 
             if (CustomTranslateEngine == null)
@@ -27,12 +30,40 @@ namespace DynamicTranslate
                 services.AddScoped(typeof(ITranslateEngine), CustomTranslateEngine.GetType());
 
             }
-            services.AddHttpClient(nameof(DefaultTranslateEngine));
             ObjectExtensions.ServiceProvider = services.BuildServiceProvider();
 
             //var dbContext = ObjectExtensions.ServiceProvider.GetService<TranslationDbContext>();
-            //if(dbContext != null)
+            //if (dbContext != null)
             //{
+
+            //    Process process = new Process();
+            //    process.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+            //    process.StartInfo.FileName = "cmd.exe";
+            //    process.StartInfo.Arguments = "/C dotnet ef migrations add initial_translation -Context TranslationDbContext -v";
+            //    process.StartInfo.UseShellExecute = false;
+            //    process.StartInfo.CreateNoWindow = true;
+            //    process.StartInfo.RedirectStandardOutput = true;
+            //    process.StartInfo.RedirectStandardError = true;
+            //    process.OutputDataReceived += (sender, args) =>
+            //    {
+            //        Console.WriteLine(args.Data.ToString());
+            //    };
+
+            //    process.ErrorDataReceived += (sender, args) =>
+            //    {
+            //        Console.WriteLine(args.Data.ToString());
+            //    };
+
+            //    process.Start();
+            //    process.BeginErrorReadLine();
+            //    process.BeginOutputReadLine();
+
+            //   process.WaitForExit();
+
+
+
+
+
             //    dbContext.Database.Migrate();
             //}
 

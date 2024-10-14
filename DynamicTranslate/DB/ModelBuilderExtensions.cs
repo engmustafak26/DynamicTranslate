@@ -2,13 +2,15 @@
 
 namespace DynamicTranslate.DB
 {
-    public class TranslationDbContext : DbContext
+    public static class ModelBuilderExtensions
     {
-        public DbSet<OverrideTranslation> OverrideTranslations { get; set; }
-        public DbSet<OverrideTranslationDetail> OverrideTranslationDetails { get; set; }
-        public TranslationDbContext(DbContextOptions<TranslationDbContext> options) : base(options) { }
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
+
+     
+        public static void AddTranslationConfiguration(this ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<OverrideTranslation>().ToTable("OverrideTranslations", "Translation");
+            modelBuilder.Entity<OverrideTranslationDetail>().ToTable("OverrideTranslationDetails", "Translation");
+
             modelBuilder.Entity<OverrideTranslation>().HasKey(x => x.Id);
             modelBuilder.Entity<OverrideTranslation>().Property(x => x.LanguageCode).HasMaxLength(10).IsRequired(false);
             modelBuilder.Entity<OverrideTranslation>().Property(x => x.Entity).HasMaxLength(150).IsRequired(false);

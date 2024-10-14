@@ -8,6 +8,10 @@ namespace DynamicTranslate.DB
 {
     public class OverrideTranslation
     {
+        public OverrideTranslation()
+        {
+            OverrideTranslationDetails=new HashSet<OverrideTranslationDetail>();
+        }
         public long Id { get; set; }
         public string LanguageCode { get; set; }
         public string Entity { get;  set; }
@@ -16,16 +20,6 @@ namespace DynamicTranslate.DB
         public string Text { get; set; }
         public DateTime CreatedAt { get; set; }
 
-        public virtual ICollection<OverrideTranslationDetail> OverrideTranslationDetails { get; set; }
-    }
-
-    public class OverrideTranslationDetail
-    {
-        public long Id { get; set; }
-        public string LanguageCode { get; set; }        
-        public long OverrideTranslationId { get; set; }
-        public string Translation { get; set; }
-
-        public OverrideTranslation OverrideTranslation { get; set; }    
+        public  ICollection<OverrideTranslationDetail> OverrideTranslationDetails { get; set; }
     }
 }
