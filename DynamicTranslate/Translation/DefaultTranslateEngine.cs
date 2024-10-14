@@ -18,7 +18,7 @@ namespace DynamicTranslate.Translation
             {
                 if (input is null || input.Length == 0)
                     return new string[0];
-                const string delimiter = @"/\";
+                const string delimiter = @" /\ ";
 
                 var translator = new GoogleTranslator();
 
