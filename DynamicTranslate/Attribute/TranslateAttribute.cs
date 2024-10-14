@@ -59,6 +59,8 @@ namespace DynamicTranslate.Attribute
         public void ChangeKey(string newKey)
         {
             Key = newKey;
+            DatabaseRecordStatus = TranslateDatabaseRecordStatus.NotFound;
+
         }
     }
 

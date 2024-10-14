@@ -31,18 +31,26 @@ namespace DynamicTranslate
                 if (overrideMatched.Length > 0)
                 {
                     string[] overrideMatchedQueryArray = overrideMatched.Select(x => $"{x.Attribute.Entity}_{x.Attribute.Property}_{(x.Attribute.IsKeyTranslation ? x.Attribute.Key : x.KeyValue)}").ToArray();
-                    var translationRecords = await dbContext.OverrideTranslations
-                                                        .Include(x => x.OverrideTranslationDetails
-                                                                        .Where(y => y.LanguageCode == targetLanguageCode))
+                    var translationRecords = await dbContext.OverrideTranslations.AsNoTracking()
                                                         .Where(x => x.LanguageCode == sourceLanguageCode &&
                                                                 overrideMatchedQueryArray.Contains(x.Entity + "_" + x.Property + "_" + x.Key))
-                                                        .ToArrayAsync();
+                                                        .Select(x => new
+                                                        {
+                                                            Master = x,
+                                                            Details = dbContext.OverrideTranslationDetails
+                                                                                .Where(y => y.LanguageCode == targetLanguageCode)
+                                                                                .ToArray()
+                                                        })
+                                                        .ToArrayAsync()
+                                                        .ContinueWith(x => x.Result.Select(y =>
+                                                        {
+                                                            y.Master.OverrideTranslationDetails = y.Details.ToArray();
+                                                            return y.Master;
+                                                        }).ToArray());
 
                     foreach (var translationRecord in translationRecords)
                     {
-                        translationRecord.OverrideTranslationDetails = translationRecord.OverrideTranslationDetails
-                                                                                    .Where(x => x.LanguageCode == targetLanguageCode)
-                                                                                    .ToArray();
+
                         var matchedRecord = overrideMatched.FirstOrDefault(x => x.Attribute.IsMatched(translationRecord.Entity, translationRecord.Property)
                                                                              && (x.Attribute.IsKeyTranslation ? x.Attribute.Key : x.KeyValue) == translationRecord.Key);
                         if (matchedRecord == null)
@@ -136,7 +144,7 @@ namespace DynamicTranslate
                                 {
                                     LanguageCode = targetLanguageCode,
                                     Translation = item.Translation,
-                                    OverrideTranslation = item.RelatedOverrideTranslation,
+                                    OverrideTranslationId = item.RelatedOverrideTranslation.Id,
                                 });
                             break;
 
@@ -183,7 +191,7 @@ namespace DynamicTranslate
                 //{
                 //    property.SetValue(value, func(param));
                 //}
-                if ( attr != null && property.PropertyType == typeof(string) && !string.IsNullOrWhiteSpace(val.ToString()))
+                if (attr != null && property.PropertyType == typeof(string) && !string.IsNullOrWhiteSpace(val.ToString()))
                 {
                     if (matched != null)
                     {
