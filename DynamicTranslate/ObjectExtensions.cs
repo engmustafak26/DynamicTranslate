@@ -32,7 +32,7 @@ namespace DynamicTranslate
             {
                 if (overrideMatched.Length > 0)
                 {
-                    string[] overrideMatchedQueryArray = overrideMatched.Select(x => $"{x.Attribute.Entity}_{x.Attribute.Property}_{(x.Attribute.IsKeyTranslation ? x.Attribute.Key : x.KeyValue)}").ToArray();
+                    string[] overrideMatchedQueryArray = overrideMatched.Select(x => $"{x.Attribute.Entity}_{x.Attribute.Property}_{x.KeyValue}").ToArray();
                     var translationRecords = await overrideTranslationDSet.DbSet
                                                         .Where(x => x.LanguageCode == sourceLanguageCode &&
                                                                 overrideMatchedQueryArray.Contains(x.Entity + "_" + x.Property + "_" + x.Key))
@@ -51,7 +51,7 @@ namespace DynamicTranslate
                     {
 
                         var matchedRecord = overrideMatched.FirstOrDefault(x => x.Attribute.IsMatched(translationRecord.Master.Entity, translationRecord.Master.Property)
-                                                                             && (x.Attribute.IsKeyTranslation ? x.Attribute.Key : x.KeyValue) == translationRecord.Master.Key);
+                                                                             &&  x.KeyValue == translationRecord.Master.Key);
                         if (matchedRecord == null)
                             continue;
 
@@ -106,7 +106,7 @@ namespace DynamicTranslate
                                     Text = item.Text,
                                     Entity = item.Attribute.Entity,
                                     Property = item.Attribute.Property,
-                                    Key = item.Attribute.IsKeyTranslation ? item.Attribute.Key : item.KeyValue,
+                                    Key =  item.KeyValue,
                                     OverrideTranslationDetails = new OverrideTranslationDetail[]
                                      {
                                      new OverrideTranslationDetail
@@ -128,7 +128,7 @@ namespace DynamicTranslate
                                     Text = item.Text,
                                     Entity = item.Attribute.Entity,
                                     Property = item.Attribute.Property,
-                                    Key = item.Attribute.IsKeyTranslation ? item.Attribute.Key : item.KeyValue,
+                                    Key = item.KeyValue,
                                     OverrideTranslationDetails = new OverrideTranslationDetail[]
                                      {
                                      new OverrideTranslationDetail
@@ -189,18 +189,13 @@ namespace DynamicTranslate
                 var val = property.GetValue(value);
                 var attr = property.GetCustomAttribute<TranslateAttribute>();
                 string KeyValue = null;
-                //if (property.CanWrite && val is T param)
-                //{
-                //    property.SetValue(value, func(param));
-                //}
+                
                 if (attr != null && property.PropertyType == typeof(string) && !string.IsNullOrWhiteSpace(val.ToString()))
                 {
                     if (matched != null)
                     {
-                        if (attr.IsEntityTranslation)
-                        {
                             KeyValue = type.GetProperty(attr.Key)?.GetValue(value, null)?.ToString();
-                        }
+                        
                         matched.Add(new TranslateExchangeStructure(attr, val.ToString(), KeyValue));
                     }
                     else

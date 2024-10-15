@@ -46,21 +46,9 @@ namespace DynamicTranslate.Attribute
                 return false;
             }
 
-            
 
-            if (string.IsNullOrWhiteSpace(Entity))
-            {
-                return false;
-            }
 
-            return Entity == entity && Property == property ;
-        }
-
-        public void ChangeKey(string newKey)
-        {
-            Key = newKey;
-            DatabaseRecordStatus = TranslateDatabaseRecordStatus.NotFound;
-
+            return Entity == entity && Property == property;
         }
     }
 
