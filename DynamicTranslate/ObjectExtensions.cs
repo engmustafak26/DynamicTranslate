@@ -50,7 +50,7 @@ namespace DynamicTranslate
                     {
 
                         var matchedRecord = overrideMatched.FirstOrDefault(x => x.Attribute.IsMatched(translationRecord.Master.Entity, translationRecord.Master.Property)
-                                                                             &&  x.KeyValue == translationRecord.Master.Key);
+                                                                             && x.KeyValue == translationRecord.Master.Key);
                         if (matchedRecord == null)
                             continue;
 
@@ -105,7 +105,7 @@ namespace DynamicTranslate
                                     Text = item.Text,
                                     Entity = item.Attribute.Entity,
                                     Property = item.Attribute.Property,
-                                    Key =  item.KeyValue,
+                                    Key = item.KeyValue,
                                     OverrideTranslationDetails = new OverrideTranslationDetail[]
                                      {
                                      new OverrideTranslationDetail
@@ -188,13 +188,16 @@ namespace DynamicTranslate
                 var val = property.GetValue(value);
                 var attr = property.GetCustomAttribute<TranslateAttribute>();
                 string KeyValue = null;
-                
+
                 if (attr != null && property.PropertyType == typeof(string) && !string.IsNullOrWhiteSpace(val.ToString()))
                 {
                     if (matched != null)
                     {
+                        if (!string.IsNullOrWhiteSpace(attr.Key))
+                        {
                             KeyValue = type.GetProperty(attr.Key)?.GetValue(value, null)?.ToString();
-                        
+                        }
+
                         matched.Add(new TranslateExchangeStructure(attr, val.ToString(), KeyValue));
                     }
                     else
