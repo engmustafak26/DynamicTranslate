@@ -3,7 +3,6 @@ using DynamicTranslate.DB;
 using DynamicTranslate.Translation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
