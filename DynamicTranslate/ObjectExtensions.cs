@@ -9,12 +9,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DynamicTranslate
 {
     public static class ObjectExtensions
     {
+        static SemaphoreSlim SemaphoreSlim = new SemaphoreSlim(1);
         internal static IServiceProvider ServiceProvider { get; set; }
         public static async Task<T> Translate<T>(this T obj, string targetLanguageCode, string sourceLanguageCode = "en")
         {
@@ -80,15 +82,30 @@ namespace DynamicTranslate
 
             var promotedToTranslation = matched.Where(x => x.Attribute.DatabaseRecordStatus != TranslateDatabaseRecordStatus.Found).ToArray();
 
-            var translation = await ServiceProvider.GetRequiredService<ITranslateEngine>()
-                                        .TranslateAsync(promotedToTranslation.Select(x => x.Text).ToArray(), targetLanguageCode, sourceLanguageCode);
+            string[] translation;
+            try
+            {
+                await SemaphoreSlim.WaitAsync();
+                translation = await ServiceProvider.GetRequiredService<ITranslateEngine>()
+                                           .TranslateAsync(promotedToTranslation.Select(x => x.Text).ToArray(), targetLanguageCode, sourceLanguageCode);
+            }
+            finally
+            {
+                SemaphoreSlim?.Release();
+            }
+
+            bool translationSuccess = false;
 
             for (var i = 0; i < promotedToTranslation.Length; i++)
             {
+                if (promotedToTranslation[i].Text != translation[i])
+                {
+                    translationSuccess = true;
+                }
                 promotedToTranslation[i].Translation = translation[i];
             }
 
-            if (overrideTranslationDSet != null)
+            if (overrideTranslationDSet != null && translationSuccess)
             {
                 overrideTranslationDetailSet.ClearEntities();
 

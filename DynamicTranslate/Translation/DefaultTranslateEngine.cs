@@ -13,24 +13,21 @@ namespace DynamicTranslate.Translation
     internal class DefaultTranslateEngine : ITranslateEngine
     {
 
-        public async Task<string[]> TranslateAsync(string[] input, string toLanguageCode, string fromLanguageCode = "en")
+        public async Task<string[]> TranslateAsync(string[] input, string toLanguageCode, string fromLanguageCode)
         {
             try
             {
                 if (input is null || input.Length == 0)
                     return new string[0];
-                const string delimiter = @" ____ ";
+                const string delimiter = " \r\n|||\r\n ";
 
                 var translator = new GoogleTranslator();
 
-                List<Task<GoogleTranslationResult>> tasks = new List<Task<GoogleTranslationResult>>(input.Length);
-                foreach (var token in input)
-                {
-                    tasks.Add(translator.TranslateAsync(token, toLanguageCode, fromLanguageCode));
-                }
-                await Task.WhenAll(tasks);
-                var result = tasks.Select(x => x.Result.Translation).ToArray();
-                return result;
+                var result = await translator.TranslateAsync(string.Join(delimiter, input), toLanguageCode, fromLanguageCode);
+                var translateString = result.Translation;//.Replace("| 0|", delimiter).Replace("| 0 |", delimiter).Replace("|0 |", delimiter);
+                var returnTranslation = translateString.Split(new string[] { delimiter }, StringSplitOptions.None);
+
+                return returnTranslation;
             }
             catch (Exception ex)
             {
