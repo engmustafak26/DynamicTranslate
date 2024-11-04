@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Title>Dynamic i18n Translate</Title>
     <Authors>Mustafa kamal</Authors>
     <Copyright>copyright 2024 for mustafa kamal</Copyright>
@@ -13,7 +12,6 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <Version>1.7.3</Version>
   </PropertyGroup>
-
   <ItemGroup>
     <None Include="..\..\..\..\Downloads\ush22-img-globaltrade.png__1080x1080_q85_crop_subsampling-2_upscale.png">
       <Pack>True</Pack>
@@ -24,15 +22,12 @@
       <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="GTranslate" Version="2.2.8" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="3.1.32" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="3.1.32" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="3.1.32" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="2.1.0" />
-    <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
     <PackageReference Include="System.Net.Http.Json" Version="8.0.1" />
   </ItemGroup>
-
 </Project>
