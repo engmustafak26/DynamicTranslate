@@ -205,6 +205,10 @@ namespace DynamicTranslate
                     continue;
 
                 var val = property.GetValue(value);
+                if (value is IEnumerable enumerable)
+                {
+                    ReadWritePropertiesRecursive(enumerable, matched, writeValues);
+                }
                 var attr = property.GetCustomAttribute<TranslateAttribute>();
                 string KeyValue = null;
 
