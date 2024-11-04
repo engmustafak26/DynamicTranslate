@@ -185,11 +185,13 @@ namespace DynamicTranslate
             if (value is null)
                 return;
 
-            if (value is IEnumerable)
+            if (value is IEnumerable collection)
             {
                 IList collection = (IList)value;
                 foreach (var val in collection)
+                {
                     ReadWritePropertiesRecursive(val, matched, writeValues);
+                }
                 return;
             }
 
