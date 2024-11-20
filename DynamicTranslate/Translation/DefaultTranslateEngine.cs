@@ -15,7 +15,7 @@ namespace DynamicTranslate.Translation
                     return new string[0];
                 const string delimiter = " \r\n|||\r\n ";
 
-                var translator = new GoogleTranslator();
+                var translator = new AggregateTranslator();
 
                 var result = await translator.TranslateAsync(string.Join(delimiter, input), toLanguageCode, fromLanguageCode);
                 var translateString = result.Translation;//.Replace("| 0|", delimiter).Replace("| 0 |", delimiter).Replace("|0 |", delimiter);

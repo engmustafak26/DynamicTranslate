@@ -42,7 +42,7 @@ namespace DynamicTranslate
                         await overrideTranslationDSet
                         .DbSet
                         .Where(x =>
-                        x.LanguageCode == sourceLanguageCode &&
+                        /*x.LanguageCode == sourceLanguageCode &&*/
                         overrideMatchedQueryArray.Contains(x.Entity + "_" + x.Property + "_" + x.Key))
                         .Select(x => new
                         {
@@ -119,7 +119,12 @@ namespace DynamicTranslate
             }
             try
             {
-                if (overrideTranslationDSet != null && translationSuccess)
+
+                if (string.IsNullOrWhiteSpace(sourceLanguageCode))
+                {
+                    sourceLanguageCode = "auto";
+                }
+            if (overrideTranslationDSet != null && translationSuccess)
                 {
                     overrideTranslationDetailSet.ClearEntities();
 
@@ -183,13 +188,14 @@ namespace DynamicTranslate
                                 break;
                         }
                     }
-
+                }
+                try
+                {
                     await overrideTranslationDSet.SaveChangesAsync();
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
+                catch (Exception ex)
+                {
+                }
             }
             PropertiesExtension.ReadWritePropertiesRecursive(obj, writeValues: matched.Select(x => x.Translation).ToList());
             return obj;
@@ -246,7 +252,7 @@ namespace DynamicTranslate
                         writeValues.RemoveAt(0);
                     }
                 }
-                else if (property.PropertyType.IsClass && property.PropertyType != typeof(string))
+                else if ((property.PropertyType.IsClass || property.PropertyType.IsInterface) && property.PropertyType != typeof(string))
                 {
                     ReadWritePropertiesRecursive(val, matched, writeValues);
                 }

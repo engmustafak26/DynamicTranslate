@@ -10,7 +10,7 @@
     <RepositoryUrl>https://github.com/engmustafak26/DynamicTranslate</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <Version>1.7.3</Version>
+    <Version>1.7.5</Version>
   </PropertyGroup>
   <ItemGroup>
     <None Include="..\..\..\..\Downloads\ush22-img-globaltrade.png__1080x1080_q85_crop_subsampling-2_upscale.png">
