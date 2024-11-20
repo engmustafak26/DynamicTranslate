@@ -35,7 +35,7 @@ namespace DynamicTranslate
                 {
                     string[] overrideMatchedQueryArray = overrideMatched.Select(x => $"{x.Attribute.Entity}_{x.Attribute.Property}_{x.KeyValue}").ToArray();
                     var translationRecords = await overrideTranslationDSet.DbSet
-                                                        .Where(x => x.LanguageCode == sourceLanguageCode &&
+                                                        .Where(x => /*x.LanguageCode == sourceLanguageCode &&*/
                                                                 overrideMatchedQueryArray.Contains(x.Entity + "_" + x.Property + "_" + x.Key))
                                                         .Select(x => new
                                                         {
@@ -108,6 +108,10 @@ namespace DynamicTranslate
             if (overrideTranslationDSet != null && translationSuccess)
             {
                 overrideTranslationDetailSet.ClearEntities();
+                if (string.IsNullOrWhiteSpace(sourceLanguageCode))
+                {
+                    sourceLanguageCode = "auto";
+                }
 
                 foreach (var item in matched)
                 {
@@ -169,8 +173,13 @@ namespace DynamicTranslate
                             break;
                     }
                 }
-
-                await overrideTranslationDSet.SaveChangesAsync();
+                try
+                {
+                    await overrideTranslationDSet.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                }
             }
             PropertiesExtension.ReadWritePropertiesRecursive(obj, writeValues: matched.Select(x => x.Translation).ToList());
 
@@ -223,7 +232,7 @@ namespace DynamicTranslate
                         writeValues.RemoveAt(0);
                     }
                 }
-                else if (property.PropertyType.IsClass && property.PropertyType != typeof(string))
+                else if ((property.PropertyType.IsClass || property.PropertyType.IsInterface) && property.PropertyType != typeof(string))
                 {
                     ReadWritePropertiesRecursive(val, matched, writeValues);
                 }

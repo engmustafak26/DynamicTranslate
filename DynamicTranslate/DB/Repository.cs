@@ -22,8 +22,14 @@ namespace DynamicTranslate.DB
 
         public void ClearEntities()
         {
-            _databaseContext.ChangeTracker.Entries().ToList()
-                .ForEach(x => x.State = EntityState.Detached);
+            try
+            {
+                _databaseContext.ChangeTracker.Entries().ToList()
+                    .ForEach(x => x.State = EntityState.Detached);
+            }
+            catch (Exception ex)
+            {
+            }
 
         }
         public async Task SaveChangesAsync()
