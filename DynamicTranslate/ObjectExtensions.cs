@@ -117,78 +117,76 @@ namespace DynamicTranslate
                 }
                 promotedToTranslation[i].Translation = translation[i];
             }
-            try
+
+            if (string.IsNullOrWhiteSpace(sourceLanguageCode))
             {
-
-                if (string.IsNullOrWhiteSpace(sourceLanguageCode))
-                {
-                    sourceLanguageCode = "auto";
-                }
+                sourceLanguageCode = "auto";
+            }
             if (overrideTranslationDSet != null && translationSuccess)
+            {
+                overrideTranslationDetailSet.ClearEntities();
+
+                foreach (var item in matched)
                 {
-                    overrideTranslationDetailSet.ClearEntities();
-
-                    foreach (var item in matched)
+                    switch (item.Attribute.DatabaseRecordStatus)
                     {
-                        switch (item.Attribute.DatabaseRecordStatus)
-                        {
-                            case TranslateDatabaseRecordStatus.NotFound:
-                                overrideTranslationDSet.DbSet.Add(
-                                    new OverrideTranslation
-                                    {
-                                        CreatedAt = DateTime.Now,
-                                        LanguageCode = sourceLanguageCode,
-                                        Text = item.Text,
-                                        Entity = item.Attribute.Entity,
-                                        Property = item.Attribute.Property,
-                                        Key = item.KeyValue,
-                                        OverrideTranslationDetails = new OverrideTranslationDetail[]
-                                         {
+                        case TranslateDatabaseRecordStatus.NotFound:
+                            overrideTranslationDSet.DbSet.Add(
+                                new OverrideTranslation
+                                {
+                                    CreatedAt = DateTime.Now,
+                                    LanguageCode = sourceLanguageCode,
+                                    Text = item.Text,
+                                    Entity = item.Attribute.Entity,
+                                    Property = item.Attribute.Property,
+                                    Key = item.KeyValue,
+                                    OverrideTranslationDetails = new OverrideTranslationDetail[]
+                                     {
                                      new OverrideTranslationDetail
                                      {
                                          LanguageCode = targetLanguageCode,
                                          Translation= item.Translation,
                                      }
-                                         }
-                                    });
-                                break;
-                            case TranslateDatabaseRecordStatus.Changed:
+                                     }
+                                });
+                            break;
+                        case TranslateDatabaseRecordStatus.Changed:
 
-                                overrideTranslationDSet.DbSet.Remove(item.RelatedOverrideTranslation);
-                                overrideTranslationDSet.DbSet.Add(
-                                    new OverrideTranslation
-                                    {
-                                        CreatedAt = DateTime.Now,
-                                        LanguageCode = sourceLanguageCode,
-                                        Text = item.Text,
-                                        Entity = item.Attribute.Entity,
-                                        Property = item.Attribute.Property,
-                                        Key = item.KeyValue,
-                                        OverrideTranslationDetails = new OverrideTranslationDetail[]
-                                         {
+                            overrideTranslationDSet.DbSet.Remove(item.RelatedOverrideTranslation);
+                            overrideTranslationDSet.DbSet.Add(
+                                new OverrideTranslation
+                                {
+                                    CreatedAt = DateTime.Now,
+                                    LanguageCode = sourceLanguageCode,
+                                    Text = item.Text,
+                                    Entity = item.Attribute.Entity,
+                                    Property = item.Attribute.Property,
+                                    Key = item.KeyValue,
+                                    OverrideTranslationDetails = new OverrideTranslationDetail[]
+                                     {
                                      new OverrideTranslationDetail
                                      {
                                          LanguageCode = targetLanguageCode,
                                          Translation= item.Translation,
                                      }
-                                         }
-                                    });
-                                break;
-                            case TranslateDatabaseRecordStatus.TargetLanguageNotFound:
-                                overrideTranslationDetailSet.DbSet.AddRange(
-                                    new OverrideTranslationDetail
-                                    {
-                                        LanguageCode = targetLanguageCode,
-                                        Translation = item.Translation,
-                                        OverrideTranslationId = item.RelatedOverrideTranslation.Id,
-                                    });
-                                break;
+                                     }
+                                });
+                            break;
+                        case TranslateDatabaseRecordStatus.TargetLanguageNotFound:
+                            overrideTranslationDetailSet.DbSet.AddRange(
+                                new OverrideTranslationDetail
+                                {
+                                    LanguageCode = targetLanguageCode,
+                                    Translation = item.Translation,
+                                    OverrideTranslationId = item.RelatedOverrideTranslation.Id,
+                                });
+                            break;
 
-                            default:
-                                break;
-                        }
+                        default:
+                            break;
                     }
                 }
+
                 try
                 {
                     await overrideTranslationDSet.SaveChangesAsync();
