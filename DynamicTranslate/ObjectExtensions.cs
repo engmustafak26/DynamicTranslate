@@ -6,9 +6,9 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -16,43 +16,57 @@ namespace DynamicTranslate
 {
     public static class ObjectExtensions
     {
-        static SemaphoreSlim SemaphoreSlim = new SemaphoreSlim(1);
+        static readonly SemaphoreSlim SemaphoreSlim = new SemaphoreSlim(1);
         internal static IServiceProvider ServiceProvider { get; set; }
-        public static async Task<T> Translate<T>(this T obj, string targetLanguageCode, string sourceLanguageCode = "en")
+        public static async Task<T> Translate<T>(this T obj, string targetLanguageCode, string sourceLanguageCode = "en", CancellationToken cancellationToken = default)
         {
             List<TranslateExchangeStructure> matched = new List<TranslateExchangeStructure>(20);
             PropertiesExtension.ReadWritePropertiesRecursive(obj, matched);
 
-            var overrideTranslationDSet = ServiceProvider.GetService<Repository<OverrideTranslation>>();
-            var overrideTranslationDetailSet = ServiceProvider.GetService<Repository<OverrideTranslationDetail>>();
+            Repository<OverrideTranslation> overrideTranslationDSet = ServiceProvider.GetService<Repository<OverrideTranslation>>();
+            Repository<OverrideTranslationDetail> overrideTranslationDetailSet = ServiceProvider.GetService<Repository<OverrideTranslationDetail>>();
 
-            var overrideMatched = matched.Where(x => x.Attribute.IsEntityTranslation || x.Attribute.IsKeyTranslation)
-                                         .ToArray();
+            var overrideMatched =
+                matched
+                .Where(x =>
+                    x.Attribute.IsEntityTranslation ||
+                    x.Attribute.IsKeyTranslation)
+                .ToArray();
 
             if (overrideTranslationDSet != null)
             {
                 if (overrideMatched.Length > 0)
                 {
                     string[] overrideMatchedQueryArray = overrideMatched.Select(x => $"{x.Attribute.Entity}_{x.Attribute.Property}_{x.KeyValue}").ToArray();
-                    var translationRecords = await overrideTranslationDSet.DbSet
-                                                        .Where(x => /*x.LanguageCode == sourceLanguageCode &&*/
-                                                                overrideMatchedQueryArray.Contains(x.Entity + "_" + x.Property + "_" + x.Key))
-                                                        .Select(x => new
-                                                        {
-                                                            Master = x,
-                                                            Details = overrideTranslationDetailSet.DbSet
-                                                                                .Where(y => y.OverrideTranslationId == x.Id
-                                                                                              && y.LanguageCode == targetLanguageCode)
-                                                                                .ToList()
-
-                                                        })
-                                                        .ToArrayAsync();
+                    var translationRecords =
+                        await overrideTranslationDSet
+                        .DbSet
+                        .Where(x =>
+                        /*x.LanguageCode == sourceLanguageCode &&*/
+                        overrideMatchedQueryArray.Contains(x.Entity + "_" + x.Property + "_" + x.Key))
+                        .Select(x => new
+                        {
+                            Master = x,
+                            Details = overrideTranslationDetailSet.DbSet
+                            .Where(y =>
+                                y.OverrideTranslationId == x.Id &&
+                                y.LanguageCode == targetLanguageCode)
+                            .ToList()
+                        })
+                        .ToArrayAsync(cancellationToken);
 
                     foreach (var translationRecord in translationRecords)
                     {
 
-                        var matchedRecord = overrideMatched.FirstOrDefault(x => x.Attribute.IsMatched(translationRecord.Master.Entity, translationRecord.Master.Property)
-                                                                             && x.KeyValue == translationRecord.Master.Key);
+                        var matchedRecord =
+                            overrideMatched
+                            .FirstOrDefault(x =>
+                                x.Attribute
+                                .IsMatched(
+                                    translationRecord.Master.Entity,
+                                    translationRecord.Master.Property) &&
+                                x.KeyValue == translationRecord.Master.Key);
+
                         if (matchedRecord == null)
                             continue;
 
@@ -74,20 +88,19 @@ namespace DynamicTranslate
                         {
                             matchedRecord.Attribute.DatabaseRecordStatus = TranslateDatabaseRecordStatus.Changed;
                         }
-
-
                     }
                 }
             }
 
-            var promotedToTranslation = matched.Where(x => x.Attribute.DatabaseRecordStatus != TranslateDatabaseRecordStatus.Found).ToArray();
+            var promotedToTranslation = matched.Where(x => x.Attribute.DatabaseRecordStatus != TranslateDatabaseRecordStatus.Found).ToImmutableHashSet().ToImmutableArray();
 
             string[] translation;
             try
             {
                 await SemaphoreSlim.WaitAsync();
-                translation = await ServiceProvider.GetRequiredService<ITranslateEngine>()
-                                           .TranslateAsync(promotedToTranslation.Select(x => x.Text).ToArray(), targetLanguageCode, sourceLanguageCode);
+                translation =
+                    await ServiceProvider.GetRequiredService<ITranslateEngine>()
+                    .TranslateAsync(promotedToTranslation.Select(x => x.Text).ToArray(), targetLanguageCode, sourceLanguageCode);
             }
             finally
             {
@@ -105,13 +118,13 @@ namespace DynamicTranslate
                 promotedToTranslation[i].Translation = translation[i];
             }
 
+            if (string.IsNullOrWhiteSpace(sourceLanguageCode))
+            {
+                sourceLanguageCode = "auto";
+            }
             if (overrideTranslationDSet != null && translationSuccess)
             {
                 overrideTranslationDetailSet.ClearEntities();
-                if (string.IsNullOrWhiteSpace(sourceLanguageCode))
-                {
-                    sourceLanguageCode = "auto";
-                }
 
                 foreach (var item in matched)
                 {
@@ -173,6 +186,7 @@ namespace DynamicTranslate
                             break;
                     }
                 }
+
                 try
                 {
                     await overrideTranslationDSet.SaveChangesAsync();
@@ -182,8 +196,8 @@ namespace DynamicTranslate
                 }
             }
             PropertiesExtension.ReadWritePropertiesRecursive(obj, writeValues: matched.Select(x => x.Translation).ToList());
-
             return obj;
+
         }
     }
 
@@ -194,11 +208,12 @@ namespace DynamicTranslate
             if (value is null)
                 return;
 
-            if (value is IEnumerable)
+            if (value is IEnumerable collection)
             {
-                IList collection = (IList)value;
                 foreach (var val in collection)
+                {
                     ReadWritePropertiesRecursive(val, matched, writeValues);
+                }
                 return;
             }
 
@@ -210,8 +225,11 @@ namespace DynamicTranslate
                     continue;
                 if (!property.CanRead)
                     continue;
-
                 var val = property.GetValue(value);
+                if (value is IEnumerable enumerable)
+                {
+                    ReadWritePropertiesRecursive(enumerable, matched, writeValues);
+                }
                 var attr = property.GetCustomAttribute<TranslateAttribute>();
                 string KeyValue = null;
 
