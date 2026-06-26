@@ -19,7 +19,7 @@ namespace DynamicTranslate.DB
             modelBuilder.Entity<OverrideTranslation>().Property(x => x.Text).HasMaxLength(3500).IsRequired(true);
 
 
-            modelBuilder.Entity<OverrideTranslation>().HasIndex(x => new { x.LanguageCode, x.Entity, x.Property, x.Key }).IsUnique(true);
+            modelBuilder.Entity<OverrideTranslation>().HasIndex(x => new { x.Entity, x.Property, x.Key, x.LanguageCode }).IsUnique(true);
             modelBuilder.Entity<OverrideTranslation>().HasIndex(x => x.Text);
 
 

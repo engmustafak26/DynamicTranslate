@@ -1,13 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace DynamicTranslate.DB
 {
-    public class Repository<TEntity> where TEntity : class
+    internal class Repository<TEntity> where TEntity : class
     {
         private readonly DbContext _databaseContext;
         public readonly DbSet<TEntity> DbSet;
@@ -21,8 +19,9 @@ namespace DynamicTranslate.DB
 
         public void ClearEntities()
         {
-            List<EntityEntry> dataList = _databaseContext.ChangeTracker.Entries().ToList();
-            Parallel.ForEach(dataList, entityEntry => entityEntry.State = EntityState.Detached);
+            _databaseContext.ChangeTracker.Entries().ToList()
+               .ForEach(x => x.State = EntityState.Detached);
+
         }
         public Task SaveChangesAsync(CancellationToken cancellationToken = default)
         {

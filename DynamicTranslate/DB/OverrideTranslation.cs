@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace DynamicTranslate.DB
 {
-    public class OverrideTranslation
+    internal class OverrideTranslation
     {
         public OverrideTranslation()
         {

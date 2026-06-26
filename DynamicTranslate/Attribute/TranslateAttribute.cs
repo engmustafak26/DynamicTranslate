@@ -28,9 +28,9 @@ namespace DynamicTranslate.Attribute
             DatabaseRecordStatus = TranslateDatabaseRecordStatus.NotFound;
         }
 
-        public string Entity { get; private set; }
-        public string Property { get; private set; }
-        public string Key { get; private set; }
+        internal string Entity { get; private set; }
+        internal string Property { get; private set; }
+        internal string Key { get; private set; }
 
         internal TranslateDatabaseRecordStatus DatabaseRecordStatus { get; set; }
         internal bool IsEntityTranslation => !string.IsNullOrWhiteSpace(Entity);

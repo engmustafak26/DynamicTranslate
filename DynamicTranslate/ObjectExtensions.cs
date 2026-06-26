@@ -23,180 +23,185 @@ namespace DynamicTranslate
             List<TranslateExchangeStructure> matched = new List<TranslateExchangeStructure>(20);
             PropertiesExtension.ReadWritePropertiesRecursive(obj, matched);
 
-            Repository<OverrideTranslation> overrideTranslationDSet = ServiceProvider.GetService<Repository<OverrideTranslation>>();
-            Repository<OverrideTranslationDetail> overrideTranslationDetailSet = ServiceProvider.GetService<Repository<OverrideTranslationDetail>>();
-
-            var overrideMatched =
-                matched
-                .Where(x =>
-                    x.Attribute.IsEntityTranslation ||
-                    x.Attribute.IsKeyTranslation)
-                .ToArray();
-
-            if (overrideTranslationDSet != null)
+            using (var scope = ServiceProvider.CreateScope())
             {
-                if (overrideMatched.Length > 0)
+
+                Repository<OverrideTranslation> overrideTranslationDSet = scope.ServiceProvider.GetService<Repository<OverrideTranslation>>();
+                Repository<OverrideTranslationDetail> overrideTranslationDetailSet = scope.ServiceProvider.GetService<Repository<OverrideTranslationDetail>>();
+
+                var overrideMatched =
+                    matched
+                    .Where(x =>
+                        x.Attribute.IsEntityTranslation ||
+                        x.Attribute.IsKeyTranslation)
+                    .ToArray();
+
+                if (overrideTranslationDSet != null)
                 {
-                    string[] overrideMatchedQueryArray = overrideMatched.Select(x => $"{x.Attribute.Entity}_{x.Attribute.Property}_{x.KeyValue}").ToArray();
-                    var translationRecords =
-                        await overrideTranslationDSet
-                        .DbSet
-                        .Where(x =>
-                        /*x.LanguageCode == sourceLanguageCode &&*/
-                        overrideMatchedQueryArray.Contains(x.Entity + "_" + x.Property + "_" + x.Key))
-                        .Select(x => new
-                        {
-                            Master = x,
-                            Details = overrideTranslationDetailSet.DbSet
-                            .Where(y =>
-                                y.OverrideTranslationId == x.Id &&
-                                y.LanguageCode == targetLanguageCode)
-                            .ToList()
-                        })
-                        .ToArrayAsync(cancellationToken);
-
-                    foreach (var translationRecord in translationRecords)
+                    if (overrideMatched.Length > 0)
                     {
-
-                        var matchedRecord =
-                            overrideMatched
-                            .FirstOrDefault(x =>
-                                x.Attribute
-                                .IsMatched(
-                                    translationRecord.Master.Entity,
-                                    translationRecord.Master.Property) &&
-                                x.KeyValue == translationRecord.Master.Key);
-
-                        if (matchedRecord == null)
-                            continue;
-
-                        matchedRecord.RelatedOverrideTranslation = translationRecord.Master;
-
-                        if (translationRecord.Master.Text == matchedRecord.Text)
-                        {
-                            if (translationRecord.Details.Count > 0)
+                        string[] overrideMatchedQueryArray = overrideMatched.Select(x => $"{x.Attribute.Entity}_{x.Attribute.Property}_{x.KeyValue}").ToArray();
+                        var translationRecords =
+                            await overrideTranslationDSet
+                            .DbSet
+                            .Where(x =>
+                            x.LanguageCode == sourceLanguageCode &&
+                            overrideMatchedQueryArray.Contains(x.Entity + "_" + x.Property + "_" + x.Key))
+                            .Select(x => new
                             {
-                                matchedRecord.Attribute.DatabaseRecordStatus = TranslateDatabaseRecordStatus.Found;
-                                matchedRecord.Translation = translationRecord.Details.FirstOrDefault().Translation;
+                                Master = x,
+                                Details = overrideTranslationDetailSet.DbSet
+                                .Where(y =>
+                                    y.OverrideTranslationId == x.Id &&
+                                    y.LanguageCode == targetLanguageCode)
+                                .ToList()
+                            })
+                            .ToArrayAsync(cancellationToken);
+
+                        foreach (var translationRecord in translationRecords)
+                        {
+
+                            var matchedRecord =
+                                overrideMatched
+                                .FirstOrDefault(x =>
+                                    x.Attribute
+                                    .IsMatched(
+                                        translationRecord.Master.Entity,
+                                        translationRecord.Master.Property) &&
+                                    x.KeyValue == translationRecord.Master.Key);
+
+                            if (matchedRecord == null)
+                                continue;
+
+                            matchedRecord.RelatedOverrideTranslation = translationRecord.Master;
+
+                            if (translationRecord.Master.Text == matchedRecord.Text)
+                            {
+                                if (translationRecord.Details.Count > 0)
+                                {
+                                    matchedRecord.Attribute.DatabaseRecordStatus = TranslateDatabaseRecordStatus.Found;
+                                    matchedRecord.Translation = translationRecord.Details.FirstOrDefault().Translation;
+                                }
+                                else
+                                {
+                                    matchedRecord.Attribute.DatabaseRecordStatus = TranslateDatabaseRecordStatus.TargetLanguageNotFound;
+                                }
                             }
                             else
                             {
-                                matchedRecord.Attribute.DatabaseRecordStatus = TranslateDatabaseRecordStatus.TargetLanguageNotFound;
+                                matchedRecord.Attribute.DatabaseRecordStatus = TranslateDatabaseRecordStatus.Changed;
                             }
                         }
-                        else
-                        {
-                            matchedRecord.Attribute.DatabaseRecordStatus = TranslateDatabaseRecordStatus.Changed;
-                        }
-                    }
-                }
-            }
-
-            var promotedToTranslation = matched.Where(x => x.Attribute.DatabaseRecordStatus != TranslateDatabaseRecordStatus.Found).ToImmutableHashSet().ToImmutableArray();
-
-            string[] translation;
-            try
-            {
-                await SemaphoreSlim.WaitAsync();
-                translation =
-                    await ServiceProvider.GetRequiredService<ITranslateEngine>()
-                    .TranslateAsync(promotedToTranslation.Select(x => x.Text).ToArray(), targetLanguageCode, sourceLanguageCode);
-            }
-            finally
-            {
-                SemaphoreSlim?.Release();
-            }
-
-            bool translationSuccess = false;
-
-            for (var i = 0; i < promotedToTranslation.Length; i++)
-            {
-                if (promotedToTranslation[i].Text != translation[i])
-                {
-                    translationSuccess = true;
-                }
-                promotedToTranslation[i].Translation = translation[i];
-            }
-
-            if (string.IsNullOrWhiteSpace(sourceLanguageCode))
-            {
-                sourceLanguageCode = "auto";
-            }
-            if (overrideTranslationDSet != null && translationSuccess)
-            {
-                overrideTranslationDetailSet.ClearEntities();
-
-                foreach (var item in matched)
-                {
-                    switch (item.Attribute.DatabaseRecordStatus)
-                    {
-                        case TranslateDatabaseRecordStatus.NotFound:
-                            overrideTranslationDSet.DbSet.Add(
-                                new OverrideTranslation
-                                {
-                                    CreatedAt = DateTime.Now,
-                                    LanguageCode = sourceLanguageCode,
-                                    Text = item.Text,
-                                    Entity = item.Attribute.Entity,
-                                    Property = item.Attribute.Property,
-                                    Key = item.KeyValue,
-                                    OverrideTranslationDetails = new OverrideTranslationDetail[]
-                                     {
-                                     new OverrideTranslationDetail
-                                     {
-                                         LanguageCode = targetLanguageCode,
-                                         Translation= item.Translation,
-                                     }
-                                     }
-                                });
-                            break;
-                        case TranslateDatabaseRecordStatus.Changed:
-
-                            overrideTranslationDSet.DbSet.Remove(item.RelatedOverrideTranslation);
-                            overrideTranslationDSet.DbSet.Add(
-                                new OverrideTranslation
-                                {
-                                    CreatedAt = DateTime.Now,
-                                    LanguageCode = sourceLanguageCode,
-                                    Text = item.Text,
-                                    Entity = item.Attribute.Entity,
-                                    Property = item.Attribute.Property,
-                                    Key = item.KeyValue,
-                                    OverrideTranslationDetails = new OverrideTranslationDetail[]
-                                     {
-                                     new OverrideTranslationDetail
-                                     {
-                                         LanguageCode = targetLanguageCode,
-                                         Translation= item.Translation,
-                                     }
-                                     }
-                                });
-                            break;
-                        case TranslateDatabaseRecordStatus.TargetLanguageNotFound:
-                            overrideTranslationDetailSet.DbSet.AddRange(
-                                new OverrideTranslationDetail
-                                {
-                                    LanguageCode = targetLanguageCode,
-                                    Translation = item.Translation,
-                                    OverrideTranslationId = item.RelatedOverrideTranslation.Id,
-                                });
-                            break;
-
-                        default:
-                            break;
                     }
                 }
 
+                var promotedToTranslation = matched.Where(x => x.Attribute.DatabaseRecordStatus != TranslateDatabaseRecordStatus.Found).ToImmutableHashSet().ToImmutableArray();
+
+                string[] translation;
                 try
                 {
-                    await overrideTranslationDSet.SaveChangesAsync();
+                    await SemaphoreSlim.WaitAsync();
+                    translation =
+                        await ServiceProvider.GetRequiredService<ITranslateEngine>()
+                        .TranslateAsync(promotedToTranslation.Select(x => x.Text).ToArray(), targetLanguageCode, sourceLanguageCode);
                 }
-                catch (Exception ex)
+                finally
                 {
+                    SemaphoreSlim?.Release();
                 }
+
+                bool translationSuccess = false;
+
+                for (var i = 0; i < promotedToTranslation.Length; i++)
+                {
+                    if (promotedToTranslation[i].Text != translation[i])
+                    {
+                        translationSuccess = true;
+                    }
+                    promotedToTranslation[i].Translation = translation[i];
+                }
+
+                if (string.IsNullOrWhiteSpace(sourceLanguageCode))
+                {
+                    sourceLanguageCode = "auto";
+                }
+                if (overrideTranslationDSet != null && translationSuccess)
+                {
+                    overrideTranslationDetailSet.ClearEntities();
+
+                    foreach (var item in matched)
+                    {
+                        switch (item.Attribute.DatabaseRecordStatus)
+                        {
+                            case TranslateDatabaseRecordStatus.NotFound:
+                                overrideTranslationDSet.DbSet.Add(
+                                    new OverrideTranslation
+                                    {
+                                        CreatedAt = DateTime.Now,
+                                        LanguageCode = sourceLanguageCode,
+                                        Text = item.Text,
+                                        Entity = item.Attribute.Entity,
+                                        Property = item.Attribute.Property,
+                                        Key = item.KeyValue,
+                                        OverrideTranslationDetails = new OverrideTranslationDetail[]
+                                         {
+                                     new OverrideTranslationDetail
+                                     {
+                                         LanguageCode = targetLanguageCode,
+                                         Translation= item.Translation,
+                                     }
+                                         }
+                                    });
+                                break;
+                            case TranslateDatabaseRecordStatus.Changed:
+
+                                overrideTranslationDSet.DbSet.Remove(item.RelatedOverrideTranslation);
+                                overrideTranslationDSet.DbSet.Add(
+                                    new OverrideTranslation
+                                    {
+                                        CreatedAt = DateTime.Now,
+                                        LanguageCode = sourceLanguageCode,
+                                        Text = item.Text,
+                                        Entity = item.Attribute.Entity,
+                                        Property = item.Attribute.Property,
+                                        Key = item.KeyValue,
+                                        OverrideTranslationDetails = new OverrideTranslationDetail[]
+                                         {
+                                     new OverrideTranslationDetail
+                                     {
+                                         LanguageCode = targetLanguageCode,
+                                         Translation= item.Translation,
+                                     }
+                                         }
+                                    });
+                                break;
+                            case TranslateDatabaseRecordStatus.TargetLanguageNotFound:
+                                overrideTranslationDetailSet.DbSet.AddRange(
+                                    new OverrideTranslationDetail
+                                    {
+                                        LanguageCode = targetLanguageCode,
+                                        Translation = item.Translation,
+                                        OverrideTranslationId = item.RelatedOverrideTranslation.Id,
+                                    });
+                                break;
+
+                            default:
+                                break;
+                        }
+                    }
+
+                    try
+                    {
+                        await overrideTranslationDSet.SaveChangesAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex);
+                    }
+                }
+                PropertiesExtension.ReadWritePropertiesRecursive(obj, writeValues: matched.Select(x => x.Translation).ToList());
+                return obj;
             }
-            PropertiesExtension.ReadWritePropertiesRecursive(obj, writeValues: matched.Select(x => x.Translation).ToList());
-            return obj;
 
         }
     }
@@ -208,8 +213,9 @@ namespace DynamicTranslate
             if (value is null)
                 return;
 
-            if (value is IEnumerable collection)
+            if (value is IEnumerable && value.GetType() != typeof(string))
             {
+                IEnumerable collection = (IEnumerable)value;
                 foreach (var val in collection)
                 {
                     ReadWritePropertiesRecursive(val, matched, writeValues);
@@ -226,10 +232,9 @@ namespace DynamicTranslate
                 if (!property.CanRead)
                     continue;
                 var val = property.GetValue(value);
-                if (value is IEnumerable enumerable)
-                {
-                    ReadWritePropertiesRecursive(enumerable, matched, writeValues);
-                }
+                if (val == null)
+                    continue;
+
                 var attr = property.GetCustomAttribute<TranslateAttribute>();
                 string KeyValue = null;
 
@@ -250,7 +255,10 @@ namespace DynamicTranslate
                         writeValues.RemoveAt(0);
                     }
                 }
-                else if ((property.PropertyType.IsClass || property.PropertyType.IsInterface) && property.PropertyType != typeof(string))
+                else if ((property.PropertyType.IsClass
+                    || property.PropertyType.IsInterface
+                    || (property.PropertyType != typeof(string) && typeof(IEnumerable).IsAssignableFrom(property.PropertyType)))
+                    && property.PropertyType != typeof(string))
                 {
                     ReadWritePropertiesRecursive(val, matched, writeValues);
                 }

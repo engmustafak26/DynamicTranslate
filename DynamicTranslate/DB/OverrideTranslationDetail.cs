@@ -1,6 +1,6 @@
 ﻿namespace DynamicTranslate.DB
 {
-    public class OverrideTranslationDetail
+    internal class OverrideTranslationDetail
     {
         public long Id { get; set; }
         public string LanguageCode { get; set; }
