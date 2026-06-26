@@ -2,6 +2,8 @@
 
 Runtime translation for nested .NET POCO objects. Mark properties with `[Translate]`, call `.Translate("ar")` with a single target language code, and the library automatically translates strings, caches results in the database, detects when source text changes, and supports custom per-language overrides.
 
+Works with **any .NET version** that supports .NET Standard 2.0 (including .NET Framework, .NET Core, and modern .NET), and **any EF Core relational database provider** (SQL Server, PostgreSQL, MySQL, SQLite, Oracle, and others).
+
 **Demo video:** [https://youtu.be/-iOLKU_5aOw](https://youtu.be/-iOLKU_5aOw)
 
 ---
@@ -12,7 +14,8 @@ Runtime translation for nested .NET POCO objects. Mark properties with `[Transla
 |--------|-------------|
 | **Automatic dynamic translation** | Translates marked string properties on any object graph (nested objects and collections). |
 | **Change detection** | Compares current source text with the cached value in the database. If the text changed, it re-translates and refreshes the cache. |
-| **Translation caching** | Stores auto-translated results in SQL Server so repeat requests skip the translation engine. |
+| **Translation caching** | Stores auto-translated results in your EF Core database so repeat requests skip the translation engine. |
+| **Any .NET + any EF provider** | Library targets .NET Standard 2.0; translation tables work with any relational EF Core provider you already use. |
 | **Custom overrides per language** | After auto-translation is registered in DB, `UPDATE OverrideTranslationDetails` with hand-crafted text per language code. |
 | **Entity-keyed translations** | Tie translations to a specific entity instance using `Entity + Property + Key` (e.g. lookup name by Id). |
 | **Key-based translations** | Tie translations to a stable code/key property (e.g. error messages keyed by error code). |
@@ -48,6 +51,40 @@ flowchart TD
 
 ---
 
+## Platform compatibility
+
+| | Supported |
+|---|-----------|
+| **.NET versions** | Any project that targets **.NET Standard 2.0** or higher — e.g. .NET Framework 4.6.1+, .NET Core 2.0+, .NET 5/6/7/8/9+ |
+| **Database providers** | Any **EF Core relational provider** — SQL Server, PostgreSQL, MySQL/MariaDB, SQLite, Oracle, Firebird, etc. |
+| **Hosting** | ASP.NET Core Web API, minimal APIs, console apps, worker services, or any app where you can call `.Translate()` on a POCO |
+| **Demo project** | .NET 8 + SQL Server (reference only; not a requirement for the library) |
+
+The library does not depend on a specific database engine. Point your existing `DbContext` at whichever EF Core provider you already use, call `AddTranslationConfiguration()`, and run migrations against that database.
+
+**Example — register with different providers:**
+
+```csharp
+// SQL Server
+builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlServer(connectionString));
+
+// PostgreSQL
+builder.Services.AddDbContext<AppDbContext>(o => o.UseNpgsql(connectionString));
+
+// MySQL
+builder.Services.AddDbContext<AppDbContext>(o => o.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+
+// SQLite
+builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlite(connectionString));
+
+// Then register DynamicTranslate with the same DbContext type
+builder.Services.AddDynamicTranslate(typeof(AppDbContext));
+```
+
+> **Schema note:** Translation tables are created under the `Translation` schema. Most providers support this natively; for providers with limited schema support (e.g. SQLite), EF Core maps the schema accordingly during migration.
+
+---
+
 ## Installation
 
 ### NuGet (library only)
@@ -70,14 +107,14 @@ dotnet restore
 
 ### 1. Register services
 
-Pass your EF Core `DbContext` type so translation records can be persisted:
+Pass your EF Core `DbContext` type so translation records can be persisted. Use whichever EF Core provider your application already uses:
 
 ```csharp
 using DynamicTranslate;
 using Microsoft.EntityFrameworkCore;
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+    options.UseSqlServer(connectionString));   // or UseNpgsql, UseMySql, UseSqlite, etc.
 
 builder.Services.AddDynamicTranslate(typeof(ApplicationDbContext));
 ```
@@ -806,8 +843,9 @@ DynamicTranslate.Demo/
 
 ## Requirements
 
-- **Library:** .NET Standard 2.0+
-- **Demo:** .NET 8, SQL Server, EF Core 9
+- **Library:** .NET Standard 2.0+ (runs on .NET Framework 4.6.1+, .NET Core 2.0+, and all modern .NET versions)
+- **Persistence:** EF Core with any supported relational database provider
+- **Demo:** .NET 8 + SQL Server + EF Core 9 (sample only)
 - **Optional:** Internet access for default GTranslate engine on first uncached translation
 
 ---

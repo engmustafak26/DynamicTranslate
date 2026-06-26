@@ -7,7 +7,7 @@
     <Copyright>copyright 2024 for mustafa kamal</Copyright>
     <Description>Translate Netesd Poco objects content at run time</Description>
     <PackageProjectUrl>https://github.com/engmustafak26/DynamicTranslate</PackageProjectUrl>
-    <PackageIcon>icon</PackageIcon>
+    <PackageIcon>icon.png</PackageIcon>
     <RepositoryUrl>https://github.com/engmustafak26/DynamicTranslate</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -19,9 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="icon">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
+    <Content Include="icon.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
@@ -41,6 +39,17 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.9" />
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
     <PackageReference Include="System.Net.Http.Json" Version="10.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="icon.ico">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Update="icon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>
